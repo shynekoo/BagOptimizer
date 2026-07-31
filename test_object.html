@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+
+<h2>物品拆分测试</h2>
+
+<pre id="out"></pre>
+
+
+<script src="js/objectDetector.js"></script>
+
+
+<script>
+
+
+let map=[
+
+[0,1,1,0,0,0,2],
+
+[0,0,1,0,1,1,2],
+
+[0,0,0,0,0,1,2],
+
+[0,1,1,0,0,0,2],
+
+[0,1,0,0,0,0,2],
+
+[0,0,0,0,0,0,2]
+
+];
+
+
+
+let result=
+ObjectDetector.detect(map);
+
+
+
+document.getElementById("out")
+.innerText=
+JSON.stringify(
+result,
+null,
+2
+);
+
+
+</script>
+
+
+</body>
+
+</html>
