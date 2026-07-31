@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Item Library Editor v19</title>
+<style>
+body{background:#222;color:white;font-family:Arial}
+canvas{max-width:100%;border:1px solid #666}
+button{margin:5px;padding:8px}
+#log{height:240px;overflow:auto;background:#111;padding:10px}
+</style>
+</head>
+<body>
+
+<h3>物品库录入器 v19</h3>
+
+<input id="file" type="file" accept="image/*">
+<button id="save">保存模板</button>
+<button id="copy">复制日志</button>
+<button id="clear">清空选择</button>
+
+<p id="info"></p>
+<pre id="log"></pre>
+<canvas id="canvas"></canvas>
+
+<script>
+const file=document.getElementById("file");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+const log=document.getElementById("log");
+
+let loaded=false;
+let selected=[];
+
+const R={x:95/1280,y:1375/2844,w:1090/1280,h:925/2844};
+
+function addLog(s){
+ log.textContent+=s+"\\n";
+ log.scrollTop=log.scrollHeight;
+}
+
+file.onchange=e=>{
+ let reader=new FileReader();
+
+ reader.onload=ev=>{
+  let img=new Image();
+
+  img.onload=()=>{
+   canvas.width=img.naturalWidth;
+   canvas.height=img.naturalHeight;
+   ctx.drawImage(img,0,0);
+   loaded=true;
+   selected=[];
+   drawGrid();
+   addLog("图片加载成功 "+canvas.width+"×"+canvas.height);
+  };
+
+  img.src=ev.target.result;
+ };
+
+ reader.readAsDataURL(e.target.files[0]);
+};
+
+
+function drawGrid(){
+ let cw=canvas.width*R.w/7;
+ let ch=canvas.height*R.h/6;
+
+ ctx.strokeStyle="yellow";
+ ctx.lineWidth=2;
+
+ for(let i=0;i<=7;i++){
+  ctx.beginPath();
+  ctx.moveTo(canvas.width*R.x+i*cw,canvas.height*R.y);
+  ctx.lineTo(canvas.width*R.x+i*cw,canvas.height*R.y+6*ch);
+  ctx.stroke();
+ }
+
+ for(let i=0;i<=6;i++){
+  ctx.beginPath();
+  ctx.moveTo(canvas.width*R.x,canvas.height*R.y+i*ch);
+  ctx.lineTo(canvas.width*R.x+7*cw,canvas.height*R.y+i*ch);
+  ctx.stroke();
+ }
+}
+
+
+function redrawSelected(){
+ drawGrid();
+
+ let cw=canvas.width*R.w/7;
+ let ch=canvas.height*R.h/6;
+
+ ctx.strokeStyle="red";
+ ctx.lineWidth=5;
+
+ selected.forEach(([r,c])=>{
+  ctx.strokeRect(
+   canvas.width*R.x+c*cw,
+   canvas.height*R.y+r*ch,
+   cw,ch
+  );
+ });
+}
+
+
+canvas.onclick=e=>{
+ if(!loaded)return;
+
+ let rect=canvas.getBoundingClientRect();
+
+ let x=(e.clientX-rect.left)*canvas.width/rect.width;
+ let y=(e.clientY-rect.top)*canvas.height/rect.height;
+
+ let cw=canvas.width*R.w/7;
+ let ch=canvas.height*R.h/6;
+
+ let c=Math.floor((x-canvas.width*R.x)/cw);
+ let r=Math.floor((y-canvas.height*R.y)/ch);
+
+ if(r>=0&&r<6&&c>=0&&c<7){
+
+  let idx=selected.findIndex(a=>a[0]==r&&a[1]==c);
+
+  if(idx>=0){
+   selected.splice(idx,1);
+   addLog("取消选择: 第"+(r+1)+"行 第"+(c+1)+"列");
+  }else{
+   selected.push([r,c]);
+   addLog("选择: 第"+(r+1)+"行 第"+(c+1)+"列");
+  }
+
+  redrawSelected();
+  addLog("当前:"+JSON.stringify(selected));
+ }
+};
+
+
+save.onclick=()=>{
+ if(selected.length==0){
+  addLog("保存失败: 未选择格子");
+  return;
+ }
+
+ let item={
+  id:Date.now(),
+  cells:selected
+ };
+
+ let blob=new Blob(
+  [JSON.stringify(item,null,2)],
+  {type:"application/json"}
+ );
+
+ let a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="item_template.json";
+ a.click();
+
+ addLog("保存成功");
+ addLog(JSON.stringify(item,null,2));
+};
+
+
+copy.onclick=()=>{
+ navigator.clipboard.writeText(log.textContent);
+ addLog("日志已复制");
+};
+
+
+clear.onclick=()=>{
+ selected=[];
+ redrawSelected();
+ addLog("已清空选择");
+};
+
+</script>
+</body>
+</html>
