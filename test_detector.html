@@ -19,6 +19,7 @@
 
 
 <script src="js/detector.js"></script>
+<script src="js/objectDetector.js"></script>
 
 
 <script>
@@ -33,33 +34,90 @@ let out=document.getElementById("out");
 let img=new Image();
 
 
+
 file.onchange=function(e){
+
+    console.log("1. 图片选择成功");
+
 
     let reader=new FileReader();
 
 
+
     reader.onload=function(){
+
 
         img.onload=function(){
 
-            canvas.width=img.width;
-            canvas.height=img.height;
+
+            console.log("2. 图片加载完成");
 
 
-            let ctx=canvas.getContext("2d");
-
-            ctx.drawImage(img,0,0);
-
-
-            // 调用检测
-
-            let map=
-            Detector.splitCells(canvas);
+            canvas.width=img.naturalWidth;
+            canvas.height=img.naturalHeight;
 
 
-            out.textContent=
+
+            let ctx=
+            canvas.getContext("2d");
+
+
+
+            ctx.drawImage(
+                img,
+                0,
+                0
+            );
+
+
+
+            console.log("3. 开始检测");
+
+
+
+            let cellMap =
+            Detector.splitCells(
+                canvas
+            );
+
+
+
+            console.log(
+                "4. 格子检测结果",
+                cellMap
+            );
+
+
+
+            let objects =
+            ObjectDetector.findObjects(
+                cellMap
+            );
+
+
+
+            console.log(
+                "5. 物品检测结果",
+                JSON.stringify(
+                objects,
+                    null,
+                    2
+                )
+            );
+
+
+
+            out.textContent =
+            "格子:\n\n"+
             JSON.stringify(
-                map,
+                cellMap,
+                null,
+                2
+            )
+            +
+            "\n\n物品:\n\n"+
+            JSON.stringify(
+                objects,
                 null,
                 2
             );
@@ -68,16 +126,22 @@ file.onchange=function(e){
         }
 
 
-        img.src=reader.result;
+
+        img.src=
+        reader.result;
+
 
     }
+
 
 
     reader.readAsDataURL(
         e.target.files[0]
     );
 
+
 }
+
 
 </script>
 
