@@ -1,29 +1,15 @@
 // objectDetector.js
-// 物品区域拆分模块
+// 根据背景颜色分割物品
 
 
-const ObjectDetector = {
+window.ObjectDetector={
 
 
     rows:6,
     cols:7,
 
 
-    // 四方向
-    dirs:[
-        [1,0],
-        [-1,0],
-        [0,1],
-        [0,-1]
-    ],
-
-
-
-    // 主入口
-    detect(map){
-
-
-        let objects=[];
+    findObjects(map){
 
 
         let visited=
@@ -33,117 +19,125 @@ const ObjectDetector = {
         );
 
 
+        let result=[];
+
+
+        const dirs=[
+            [1,0],
+            [-1,0],
+            [0,1],
+            [0,-1]
+        ];
+
+
 
         for(let r=0;r<this.rows;r++){
 
             for(let c=0;c<this.cols;c++){
 
 
-                // 不是物品
                 if(
-                    map[r][c]!=1 ||
+                    this.getState(map[r][c])!==1
+                    ||
                     visited[r][c]
                 )
                     continue;
 
 
 
-                let cells=
-                this.bfs(
-                    map,
-                    r,
-                    c,
-                    visited
-                );
+                let queue=[
+                    [r,c]
+                ];
 
 
-                let shape=
-                this.cellsToShape(
-                    cells
-                );
+                visited[r][c]=true;
+
+
+                let cells=[];
 
 
 
-                objects.push({
-
-                    cells:cells,
-
-                    shape:shape
-
-                });
+                while(queue.length){
 
 
-            }
-        }
+                    let [x,y]=queue.shift();
 
 
-        return objects;
-
-    },
+                    cells.push(
+                        [x,y]
+                    );
 
 
 
+                    for(let d of dirs){
 
 
-    // BFS寻找连通块
-    bfs(map,r,c,visited){
-
-
-        let queue=[
-            [r,c]
-        ];
-
-
-        visited[r][c]=true;
-
-
-        let result=[];
+                        let nx=x+d[0];
+                        let ny=y+d[1];
 
 
 
-        while(queue.length){
-
-
-            let [x,y]=queue.shift();
-
-
-            result.push([
-                x,
-                y
-            ]);
+                        if(
+                            nx<0||
+                            nx>=this.rows||
+                            ny<0||
+                            ny>=this.cols
+                        )
+                            continue;
 
 
 
-            for(let d of this.dirs){
+                        if(
+                            visited[nx][ny]
+                        )
+                            continue;
 
 
-                let nx=x+d[0];
-                let ny=y+d[1];
+
+                        if(
+                            this.getState(map[nx][ny])!==1
+                        )
+                            continue;
 
 
 
-                if(
 
-                    nx>=0 &&
-                    nx<this.rows &&
+                        // 关键:
+                        // 比较背景颜色
 
-                    ny>=0 &&
-                    ny<this.cols &&
+                        let distance=
+                        this.colorDistance(
+                            map[x][y].bgColor,
+                            map[nx][ny].bgColor
+                        );
 
-                    map[nx][ny]==1 &&
 
-                    !visited[nx][ny]
 
-                ){
+                        // 阈值
+                        if(distance<50){
 
-                    visited[nx][ny]=true;
 
-                    queue.push([
-                        nx,
-                        ny
-                    ]);
+                            visited[nx][ny]=true;
+
+
+                            queue.push(
+                                [nx,ny]
+                            );
+
+                        }
+
+
+                    }
+
 
                 }
+
+
+
+                result.push(
+                    this.normalize(cells)
+                );
+
 
             }
 
@@ -152,35 +146,62 @@ const ObjectDetector = {
 
         return result;
 
+
+    },
+
+
+
+
+    getState(cell){
+
+        return cell.state;
+
+    },
+
+
+
+
+    colorDistance(a,b){
+
+
+        let dr=a[0]-b[0];
+        let dg=a[1]-b[1];
+        let db=a[2]-b[2];
+
+
+        return Math.sqrt(
+            dr*dr+
+            dg*dg+
+            db*db
+        );
+
     },
 
 
 
 
 
-    // 坐标转shape
-    cellsToShape(cells){
+    normalize(cells){
 
 
-        let minR=999;
-        let maxR=-1;
-
-        let minC=999;
-        let maxC=-1;
+        let minR=Math.min(
+            ...cells.map(x=>x[0])
+        );
 
 
-
-        cells.forEach(([r,c])=>{
-
-
-            minR=Math.min(minR,r);
-            maxR=Math.max(maxR,r);
-
-            minC=Math.min(minC,c);
-            maxC=Math.max(maxC,c);
+        let maxR=Math.max(
+            ...cells.map(x=>x[0])
+        );
 
 
-        });
+        let minC=Math.min(
+            ...cells.map(x=>x[1])
+        );
+
+
+        let maxC=Math.max(
+            ...cells.map(x=>x[1])
+        );
 
 
 
@@ -194,7 +215,7 @@ const ObjectDetector = {
             r++
         ){
 
-            let line="";
+            let row="";
 
 
             for(
@@ -203,25 +224,35 @@ const ObjectDetector = {
                 c++
             ){
 
-                let exist=
-                cells.some(
+
+                let ok=cells.some(
                     x=>
-                    x[0]==r &&
-                    x[1]==c
+                    x[0]===r &&
+                    x[1]===c
                 );
 
 
-                line+=exist?"1":"0";
+                row+=ok?"1":"0";
+
 
             }
 
 
-            shape.push(line);
+            shape.push(row);
 
         }
 
 
-        return shape;
+
+        return {
+
+            cells,
+
+            size:cells.length,
+
+            shape
+
+        };
 
     }
 
